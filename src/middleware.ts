@@ -11,7 +11,7 @@ import { fetchUserFromAPI } from './lib/apiUtils';
 export async function middleware(request: NextRequest) {
   try {
     const token = request.cookies.get('token');
-   //  const token = request.headers.get('Authorization')?.replace('Bearer ', ''); gormuyor server side localde oldugundan
+   //  const token = request.headers.get('Authorization')?.replace('Bearer ', ''); localde oldugundan gormuyor server side  
     if (!token) {
       const signinUrl = `${request.nextUrl.origin}/signin`;
       return NextResponse.redirect(signinUrl);

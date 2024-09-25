@@ -5,7 +5,7 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import { useRouter } from "next/navigation";
 import { useUserStore } from "@/store/useUserStore";
-import MessageBox from "@/components/MessageBox"; 
+import MessageBox from "@/components/MessageBox";
 
 const schema = yup.object().shape({
   username: yup.string().required("Username is required"),
@@ -26,7 +26,9 @@ export default function Profile() {
   const router = useRouter();
   const [message, setMessage] = useState<string | null>(null);
   const [messageType, setMessageType] = useState<"success" | "error" | null>(null);
-  
+  const [isDeleting, setIsDeleting] = useState(false); 
+  const [deleteMessage, setDeleteMessage] = useState<string | null>(null); // Silme işlemi için ayrı state
+
   const {
     register,
     handleSubmit,
@@ -44,7 +46,7 @@ export default function Profile() {
         const res = await fetch("/api/auth/user", {
           method: "GET",
           headers: {
-            "Authorization": `Bearer ${token}`,
+            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
         });
@@ -67,6 +69,7 @@ export default function Profile() {
     fetchProfile();
   }, [setValue, router, token]);
 
+  // Profil Güncelleme İşlemi
   const onSubmit = async (data: ProfileFormValues) => {
     try {
       const profileRes = await fetch("/api/auth/user", {
@@ -76,15 +79,15 @@ export default function Profile() {
           "Content-Type": "application/json",
         },
       });
-
+  
       if (!profileRes.ok) {
         console.error("Failed to fetch profile for ID");
         return;
       }
-
+  
       const profileData = await profileRes.json();
       const userId = profileData.user._id;
-
+  
       const res = await fetch(`/api/auth/user/${userId}`, {
         method: "PATCH",
         headers: {
@@ -93,10 +96,15 @@ export default function Profile() {
         },
         body: JSON.stringify(data),
       });
-
+  
       if (res.ok) {
         setMessage("Profile updated successfully!");
         setMessageType("success");
+  
+        setTimeout(() => {
+          setMessage(null);
+        }, 2000);
+        
         router.push("/profile");
       } else {
         console.error("Failed to update profile");
@@ -110,19 +118,18 @@ export default function Profile() {
     }
   };
 
-  const handleDelete = async () => {
-
-    const confirmMessage = "Are you sure you want to delete your account?";
-    setMessage(confirmMessage);
-    setMessageType(null); 
+  // Hesap Silme İşlemi
+  const handleDelete = () => {
+    setDeleteMessage("Are you sure you want to delete your account?");
   };
 
   const confirmDelete = async () => {
+    setIsDeleting(true); 
     try {
       const profileRes = await fetch("/api/auth/user", {
         method: "GET",
         headers: {
-          "Authorization": `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
       });
@@ -138,7 +145,7 @@ export default function Profile() {
       const res = await fetch(`/api/auth/user/${userId}`, {
         method: "DELETE",
         headers: {
-          "Authorization": `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
       });
@@ -157,11 +164,14 @@ export default function Profile() {
       console.error("An error occurred while deleting the user", error);
       setMessage("An error occurred while deleting the user.");
       setMessageType("error");
+    } finally {
+      setIsDeleting(false);
+      setDeleteMessage(null); // Mesajı temizle
     }
   };
 
   const cancelDelete = () => {
-    setMessage(null);
+    setDeleteMessage(null); // Mesajı kaldır
   };
 
   return (
@@ -192,9 +202,7 @@ export default function Profile() {
         </div>
 
         <div>
-          <label className="block text-gray-700 dark:text-gray-300">
-            Email
-          </label>
+          <label className="block text-gray-700 dark:text-gray-300">Email</label>
           <input
             {...register("email")}
             className="mt-1 block w-full border-2 border-gray-300 dark:border-gray-600 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
@@ -225,30 +233,30 @@ export default function Profile() {
           Update Profile
         </button>
       </form>
+
       <button
         onClick={handleDelete}
-        className="w-full bg-red-500 text-white py-2 px-4 rounded mt-4 transition hover:bg-red-600"
+        disabled={isDeleting}
+        className={`w-full bg-red-500 text-white py-2 px-4 rounded mt-4 transition hover:bg-red-600 ${isDeleting && "opacity-50 cursor-not-allowed"
+          }`}
       >
-        Delete Account
+        {isDeleting ? "Deleting..." : "Delete Account"}
       </button>
 
-      {message && (
+      {deleteMessage && (
         <div className="fixed inset-0 flex items-center justify-center z-50">
-          <div
-            className={`p-4 rounded-lg shadow-lg text-white ${
-              messageType === "success" ? "bg-green-900" : "bg-black"
-            }`}>
-            {message}
-            <div className="flex justify-between mt-4">
+          <div className="bg-white p-6 rounded shadow-lg">
+            <p className="text-xl font-semibold mb-4">{deleteMessage}</p>
+            <div className="flex justify-between">
               <button
                 onClick={confirmDelete}
-                className="bg-green-500 px-4 py-2 rounded hover:bg-green-600"
+                className="bg-red-500 text-white py-2 px-4 rounded hover:bg-red-600"
               >
                 Confirm
               </button>
               <button
                 onClick={cancelDelete}
-                className="bg-red-500 px-4 py-2 rounded hover:bg-red-600"
+                className="bg-gray-300 py-2 px-4 rounded hover:bg-gray-400"
               >
                 Cancel
               </button>
