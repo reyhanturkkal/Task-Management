@@ -1,10 +1,11 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import { useRouter } from "next/navigation";
 import { useUserStore } from "@/store/useUserStore";
+import MessageBox from "@/components/MessageBox"; 
 
 const schema = yup.object().shape({
   username: yup.string().required("Username is required"),
@@ -23,6 +24,9 @@ interface ProfileFormValues {
 
 export default function Profile() {
   const router = useRouter();
+  const [message, setMessage] = useState<string | null>(null);
+  const [messageType, setMessageType] = useState<"success" | "error" | null>(null);
+  
   const {
     register,
     handleSubmit,
@@ -31,6 +35,7 @@ export default function Profile() {
   } = useForm<ProfileFormValues>({
     resolver: yupResolver(schema),
   });
+
   const token = useUserStore((state) => state.token);
 
   useEffect(() => {
@@ -90,17 +95,29 @@ export default function Profile() {
       });
 
       if (res.ok) {
-        console.log("Profile updated successfully");
+        setMessage("Profile updated successfully!");
+        setMessageType("success");
         router.push("/profile");
       } else {
         console.error("Failed to update profile");
+        setMessage("Failed to update profile.");
+        setMessageType("error");
       }
     } catch (error) {
       console.error("An error occurred while updating the profile", error);
+      setMessage("An error occurred while updating the profile.");
+      setMessageType("error");
     }
   };
 
   const handleDelete = async () => {
+
+    const confirmMessage = "Are you sure you want to delete your account?";
+    setMessage(confirmMessage);
+    setMessageType(null); 
+  };
+
+  const confirmDelete = async () => {
     try {
       const profileRes = await fetch("/api/auth/user", {
         method: "GET",
@@ -127,15 +144,24 @@ export default function Profile() {
       });
 
       if (res.ok) {
-        console.log("User deleted successfully");
+        setMessage("User deleted successfully!");
+        setMessageType("success");
         localStorage.removeItem("accessToken");
         router.push("/signin");
       } else {
         console.error("Failed to delete user");
+        setMessage("Failed to delete user.");
+        setMessageType("error");
       }
     } catch (error) {
       console.error("An error occurred while deleting the user", error);
+      setMessage("An error occurred while deleting the user.");
+      setMessageType("error");
     }
+  };
+
+  const cancelDelete = () => {
+    setMessage(null);
   };
 
   return (
@@ -143,6 +169,14 @@ export default function Profile() {
       <h1 className="text-2xl font-bold mb-6 text-center text-gray-900 dark:text-gray-100">
         Profile
       </h1>
+
+      {message && (
+        <MessageBox
+          message={message}
+          type={messageType === "success" ? "success" : "error"}
+        />
+      )}
+
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div>
           <label className="block text-gray-700 dark:text-gray-300">
@@ -197,6 +231,31 @@ export default function Profile() {
       >
         Delete Account
       </button>
+
+      {message && (
+        <div className="fixed inset-0 flex items-center justify-center z-50">
+          <div
+            className={`p-4 rounded-lg shadow-lg text-white ${
+              messageType === "success" ? "bg-green-900" : "bg-black"
+            }`}>
+            {message}
+            <div className="flex justify-between mt-4">
+              <button
+                onClick={confirmDelete}
+                className="bg-green-500 px-4 py-2 rounded hover:bg-green-600"
+              >
+                Confirm
+              </button>
+              <button
+                onClick={cancelDelete}
+                className="bg-red-500 px-4 py-2 rounded hover:bg-red-600"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

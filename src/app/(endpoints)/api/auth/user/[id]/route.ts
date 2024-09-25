@@ -57,25 +57,31 @@ export async function PATCH(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-    try {
+  try {
       await connectMongo();
-  
+
       const userId = await getUserIdFromToken(request);
 
       await Task.deleteMany({ user: userId });
-      // Kullanıcıyı sil
+
       const user = await User.findByIdAndDelete(userId);
       if (!user) {
-        return NextResponse.json({ error: 'User not found' }, { status: 404 });
+          return NextResponse.json({ error: 'User not found' }, { status: 404 });
       }
-  
-      return NextResponse.json({ message: 'User and their tasks deleted successfully' }, { status: 200 });
-    } catch (error) {
+
+      const headers = new Headers();
+      headers.append('Set-Cookie', 'token=; HttpOnly; Path=/; Max-Age=0; SameSite=Strict');
+
+      return NextResponse.json(
+          { message: 'User and their tasks deleted successfully' }, 
+          { status: 200, headers }
+      );
+  } catch (error) {
       if (error instanceof Error) {
-        console.error('User delete error:', error.message);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+          console.error('User delete error:', error.message);
+          return NextResponse.json({ error: error.message }, { status: 500 });
       }
       console.error('Unknown user delete error:', error);
       return NextResponse.json({ error: 'User deletion failed' }, { status: 500 });
-    }
   }
+}
