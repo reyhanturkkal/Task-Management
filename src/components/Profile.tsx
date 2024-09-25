@@ -60,7 +60,7 @@ export default function Profile() {
     };
 
     fetchProfile();
-  }, [setValue, router]);
+  }, [setValue, router, token]);
 
   const onSubmit = async (data: ProfileFormValues) => {
     try {
